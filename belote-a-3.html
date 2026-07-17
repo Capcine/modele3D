@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Belote — Feuille de score</title>
+<style>
+  :root{
+    --felt:#0b5d3b;
+    --felt-dark:#083f28;
+    --gold:#caa14d;
+    --gold-dark:#a9813a;
+    --cream:#f7f3ea;
+    --ink:#20241f;
+    --red:#c0392b;
+    --row-alt:#eef3ec;
+  }
+  * { box-sizing: border-box; }
+  body{
+    margin:0;
+    font-family:"Segoe UI", Tahoma, Verdana, sans-serif;
+    background: radial-gradient(ellipse at top, var(--felt) 0%, var(--felt-dark) 70%);
+    color: var(--ink);
+    min-height:100vh;
+    padding: 24px 12px 60px;
+  }
+  .wrap{
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  h1{
+    text-align:center;
+    color: var(--cream);
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    letter-spacing:1px;
+    margin: 4px 0 18px;
+    text-shadow: 0 2px 4px rgba(0,0,0,.4);
+  }
+  .card{
+    background: var(--cream);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    padding: 18px 20px 22px;
+    margin-bottom: 18px;
+  }
+  .toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px 20px;
+    align-items:flex-end;
+    justify-content:space-between;
+  }
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    font-size:.8rem;
+    font-weight:600;
+    color:#4a5148;
+  }
+  .field select, .field input[type=text]{
+    padding:6px 8px;
+    border-radius:8px;
+    border:1px solid #c9c2af;
+    font-size:.95rem;
+    background:#fff;
+  }
+  .btn{
+    border:none;
+    border-radius:10px;
+    padding:9px 16px;
+    font-weight:700;
+    font-size:.9rem;
+    cursor:pointer;
+    transition: transform .08s ease, box-shadow .08s ease;
+    box-shadow: 0 2px 0 rgba(0,0,0,.15);
+  }
+  .btn:active{ transform: translateY(1px); box-shadow:none; }
+  .btn-gold{ background: var(--gold); color:#2b2410; }
+  .btn-gold:hover{ background: var(--gold-dark); }
+  .btn-felt{ background: var(--felt); color:#fff; }
+  .btn-felt:hover{ background: var(--felt-dark); }
+  .btn-outline{ background:transparent; border:2px solid var(--felt); color:var(--felt); box-shadow:none; }
+  .btn-danger{ background:#fff; color:var(--red); border:2px solid var(--red); box-shadow:none; }
+  .actions-row{ display:flex; gap:10px; flex-wrap:wrap; }
+
+  .table-scroll{ overflow-x:auto; border-radius:12px; }
+  table{
+    border-collapse: collapse;
+    width:100%;
+    min-width: 480px;
+    background:#fff;
+  }
+  thead th{
+    background: var(--felt);
+    color: var(--cream);
+    padding:10px 8px;
+    font-size:.85rem;
+    letter-spacing:.5px;
+    position:sticky;
+    top:0;
+  }
+  th.player-head{
+    min-width:110px;
+  }
+  th.player-head.winner{ color:#ffd9d9; }
+  th.player-head .name-input{
+    width:100%;
+    text-align:center;
+    background:transparent;
+    border:none;
+    color:inherit;
+    font-weight:800;
+    font-size:1rem;
+    border-bottom:1px dashed rgba(255,255,255,.5);
+    padding:2px 0;
+  }
+  th.player-head.winner .name-input{ color:#ffd9d9; }
+  tbody tr:nth-child(even){ background: var(--row-alt); }
+  tbody tr.personne td.cell-player{ background:#fbeeee; }
+  td, th{ text-align:center; padding:8px 6px; font-size:.9rem; }
+  td.num{ color:#6b7263; font-weight:700; }
+  td.dealer{ font-weight:700; color:var(--felt-dark); white-space:nowrap; }
+  td.dealer .toque{ margin-right:4px; }
+  td.cell-player{ position:relative; }
+  .cell-inner{ display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .cell-player input[type=number]{
+    width:64px;
+    text-align:center;
+    padding:5px 2px;
+    border:1px solid #cfcabb;
+    border-radius:6px;
+    font-size:.95rem;
+  }
+  .cell-player input[type=number]:disabled{
+    background:#f0e6e6;
+    color:#b06;
+  }
+  .br-btn{
+    border:1px solid var(--gold-dark);
+    background:#fff8e6;
+    color:var(--gold-dark);
+    font-size:.65rem;
+    font-weight:800;
+    border-radius:20px;
+    padding:1px 7px;
+    cursor:pointer;
+    letter-spacing:.5px;
+  }
+  .br-btn.active{
+    background: var(--gold);
+    color:#2b2410;
+    border-color:var(--gold-dark);
+  }
+  .taker-btn{
+    border:1px solid #2f6690;
+    background:#eaf3fa;
+    color:#2f6690;
+    font-size:.65rem;
+    font-weight:800;
+    border-radius:20px;
+    padding:1px 7px;
+    cursor:pointer;
+    letter-spacing:.5px;
+  }
+  .taker-btn.active{
+    background:#2f6690;
+    color:#fff;
+    border-color:#1e4a68;
+  }
+  td.cell-player.is-taker{ box-shadow: inset 0 0 0 2px #2f6690; border-radius:8px; }
+  td.cell-player.chute-bonus{ background:#eafaf0; }
+  td.cell-player.chute-zero{ background:#fdeaea; }
+  .contract-status{ font-size:.72rem; font-weight:700; margin-top:2px; }
+  .contract-status.ok{ color:#1d7a45; }
+  .contract-status.fail{ color:var(--red); }
+  .row-sum{ font-size:.75rem; color:#8a8377; margin-top:1px; }
+  .row-sum.bad{ color:var(--red); font-weight:700; }
+  td.row-actions{ white-space:nowrap; }
+  .personne-btn{
+    border:1px solid #b8bdb2;
+    background:#fff;
+    color:#5b6157;
+    font-size:.72rem;
+    border-radius:6px;
+    padding:4px 6px;
+    cursor:pointer;
+  }
+  .personne-btn.on{ background:var(--felt); color:#fff; border-color:var(--felt); }
+  .del-btn{
+    border:none;
+    background:transparent;
+    color:#b04a4a;
+    font-size:1rem;
+    cursor:pointer;
+    padding:2px 6px;
+  }
+  tfoot td{
+    background: var(--gold);
+    color:#2b2410;
+    font-weight:800;
+    font-size:1.05rem;
+    padding:10px 6px;
+  }
+  tfoot td.total-player.over{
+    background: var(--red);
+    color:#fff;
+  }
+  .footnote{
+    text-align:center;
+    color:#fff;
+    opacity:.85;
+    font-size:.8rem;
+    margin-top:10px;
+  }
+  .banner{
+    text-align:center;
+    background:#fff3cd;
+    border:2px solid var(--gold-dark);
+    color:#5a4207;
+    border-radius:10px;
+    padding:8px 12px;
+    font-weight:700;
+    margin-bottom:14px;
+    display:none;
+  }
+  .banner.show{ display:block; }
+
+  /* ===== Mobile : tableau -> cartes empilées ===== */
+  @media (max-width: 700px){
+    body{ padding: 14px 8px 50px; }
+    .card{ padding:14px 12px 16px; border-radius:12px; }
+    .toolbar{ flex-direction:column; align-items:stretch; }
+    .field{ width:100%; }
+    .field select{ width:100%; min-height:42px; font-size:1rem; }
+    .actions-row{ flex-direction:column; }
+    .actions-row .btn{ width:100%; min-height:44px; }
+
+    .table-scroll{ overflow-x:visible; }
+    table{ min-width:0; width:100%; }
+    thead{ display:none; }
+    tbody, tfoot{ display:block; width:100%; }
+    tbody tr{
+      display:block;
+      width:100%;
+      background:#fff;
+      border:1px solid #e2ddd0;
+      border-radius:12px;
+      padding:8px 10px;
+      margin-bottom:12px;
+      box-shadow:0 2px 6px rgba(0,0,0,.06);
+    }
+    tbody tr.personne{ background:#fbeeee; }
+    tfoot tr{
+      display:block;
+      background: var(--gold);
+      border-radius:12px;
+      padding:8px 10px;
+      margin-top:6px;
+    }
+    td{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      width:100%;
+      padding:7px 2px;
+      border-bottom:1px solid rgba(0,0,0,.06);
+      font-size:.95rem;
+      text-align:right;
+    }
+    tr td:last-child{ border-bottom:none; }
+    td[data-label]::before{
+      content: attr(data-label);
+      font-weight:700;
+      color:#5b6157;
+      text-align:left;
+      margin-right:10px;
+    }
+    tfoot td[data-label]::before{ color:#2b2410; }
+    tfoot td:not([data-label]){ display:none; }
+    td.cell-player{ flex-direction:column; align-items:stretch; }
+    td.cell-player::before{ margin-bottom:4px; }
+    td.cell-player .cell-inner{
+      flex-direction:row;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      gap:6px;
+    }
+    .cell-player input[type=number]{ width:78px; min-height:38px; font-size:1rem; }
+    .br-btn, .taker-btn, .personne-btn{ min-height:30px; padding:4px 10px; }
+    td.dealer, td.num{ justify-content:space-between; }
+    td.row-actions{ justify-content:flex-end; gap:10px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🃏 Belote — Feuille de score</h1>
+
+  <div id="banner" class="banner"></div>
+
+  <div class="card">
+    <div class="toolbar">
+      <div class="field">
+        <label for="nbJoueurs">Nombre de joueurs</label>
+        <select id="nbJoueurs">
+          <option value="3">3 joueurs</option>
+          <option value="4">4 joueurs</option>
+          <option value="5">5 joueurs</option>
+          <option value="6">6 joueurs</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="premierDonneur">Premier donneur</label>
+        <select id="premierDonneur"></select>
+      </div>
+      <div class="actions-row">
+        <button class="btn btn-felt" id="btnNouvelleManche">+ Nouvelle manche</button>
+        <button class="btn btn-outline" id="btnReset">Réinitialiser la partie</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-scroll">
+      <table id="table">
+        <thead><tr id="theadRow"></tr></thead>
+        <tbody id="tbody"></tbody>
+        <tfoot><tr id="tfootRow"></tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="footnote">Chaque manche vaut 162 points au total. Remplissez tous les scores sauf un : le dernier se calcule tout seul. Si personne ne prend, cliquez sur « — ». Marquez le preneur avec le bouton « Preneur » : s'il n'atteint pas 82 points, il marque 0 et chaque autre joueur reçoit +40 points.</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var STORAGE_KEY = "belote_score_v1";
+  var TOTAL_POINTS = 162;
+  var WIN_THRESHOLD = 1000;
+  var MIN_TAKER_POINTS = 82;
+  var CHUTE_BONUS = 40;
+
+  var state = load() || makeDefaultState(3);
+
+  function makeDefaultState(n){
+    var players = [];
+    for(var i=0;i<n;i++) players.push({ name: "Joueur " + (i+1) });
+    return { players: players, firstDealer: 0, rounds: [] };
+  }
+
+  function save(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return null;
+      var parsed = JSON.parse(raw);
+      if(!parsed || !parsed.players || !parsed.players.length) return null;
+      return parsed;
+    }catch(e){ return null; }
+  }
+
+  function emptyRound(n){
+    var values = []; var belote = [];
+    for(var i=0;i<n;i++){ values.push(null); belote.push(false); }
+    return { taken: true, values: values, belote: belote, takerIdx: null };
+  }
+
+  function dealerIndexForRound(roundIdx){
+    var n = state.players.length;
+    return (state.firstDealer + roundIdx) % n;
+  }
+
+  // Retourne l'état du contrat: null si pas de preneur désigné ou score du preneur pas encore saisi,
+  // sinon { ok: bool, takerIdx, takerVal }
+  function contractStatus(round){
+    if(!round.taken) return null;
+    if(round.takerIdx === null || round.takerIdx === undefined) return null;
+    var v = round.values[round.takerIdx];
+    if(v === null || v === undefined || v === "") return null;
+    return { ok: Number(v) >= MIN_TAKER_POINTS, takerIdx: round.takerIdx, takerVal: Number(v) };
+  }
+
+  function rowTotal(round, playerIdx){
+    if(!round.taken) return 0;
+    var base = round.values[playerIdx] || 0;
+    var bonus = round.belote[playerIdx] ? 20 : 0;
+    var status = contractStatus(round);
+    if(status && !status.ok){
+      if(playerIdx === status.takerIdx) return 0 + bonus;
+      return base + CHUTE_BONUS + bonus;
+    }
+    return base + bonus;
+  }
+
+  function grandTotal(playerIdx){
+    var sum = 0;
+    for(var r=0;r<state.rounds.length;r++) sum += rowTotal(state.rounds[r], playerIdx);
+    return sum;
+  }
+
+  function filledBaseSum(round){
+    var sum = 0, count = 0;
+    for(var i=0;i<round.values.length;i++){
+      if(round.values[i] !== null && round.values[i] !== undefined && round.values[i] !== ""){
+        sum += Number(round.values[i]);
+        count++;
+      }
+    }
+    return { sum: sum, count: count };
+  }
+
+  function autoCalc(roundIdx){
+    var round = state.rounds[roundIdx];
+    if(!round.taken) return;
+    var n = round.values.length;
+    var emptyIdx = -1, emptyCount = 0, sumFilled = 0;
+    for(var i=0;i<n;i++){
+      var v = round.values[i];
+      if(v === null || v === undefined || v === ""){
+        emptyCount++; emptyIdx = i;
+      } else {
+        sumFilled += Number(v);
+      }
+    }
+    if(emptyCount === 1 && sumFilled <= TOTAL_POINTS){
+      round.values[emptyIdx] = TOTAL_POINTS - sumFilled;
+    }
+  }
+
+  function el(tag, cls, html){
+    var e = document.createElement(tag);
+    if(cls) e.className = cls;
+    if(html !== undefined) e.innerHTML = html;
+    return e;
+  }
+
+  function renderPlayerSelects(){
+    var sel = document.getElementById("premierDonneur");
+    sel.innerHTML = "";
+    state.players.forEach(function(p, idx){
+      var o = el("option", null, p.name);
+      o.value = idx;
+      if(idx === state.firstDealer) o.selected = true;
+      sel.appendChild(o);
+    });
+    document.getElementById("nbJoueurs").value = state.players.length;
+  }
+
+  function checkThreshold(){
+    var banner = document.getElementById("banner");
+    var winners = [];
+    state.players.forEach(function(p, idx){
+      if(grandTotal(idx) >= WIN_THRESHOLD) winners.push(p.name);
+    });
+    if(winners.length){
+      banner.className = "banner show";
+      banner.textContent = "🎉 " + winners.join(", ") + " " + (winners.length>1?"ont":"a") + " atteint " + WIN_THRESHOLD + " points !";
+    } else {
+      banner.className = "banner";
+      banner.textContent = "";
+    }
+  }
+
+  function render(){
+    var n = state.players.length;
+    var theadRow = document.getElementById("theadRow");
+    var tbody = document.getElementById("tbody");
+    var tfootRow = document.getElementById("tfootRow");
+    theadRow.innerHTML = "";
+    tbody.innerHTML = "";
+    tfootRow.innerHTML = "";
+
+    theadRow.appendChild(el("th", null, "#"));
+    theadRow.appendChild(el("th", null, "Donneur"));
+    state.players.forEach(function(p, idx){
+      var winner = grandTotal(idx) >= WIN_THRESHOLD;
+      var th = el("th", "player-head" + (winner ? " winner" : ""));
+      var input = el("input", "name-input");
+      input.type = "text";
+      input.value = p.name;
+      input.addEventListener("change", function(){
+        state.players[idx].name = input.value.trim() || ("Joueur " + (idx+1));
+        save(); render();
+      });
+      th.appendChild(input);
+      theadRow.appendChild(th);
+    });
+    theadRow.appendChild(el("th", null, "Somme"));
+    theadRow.appendChild(el("th", null, ""));
+
+    state.rounds.forEach(function(round, r){
+      var tr = el("tr", round.taken ? "" : "personne");
+      var status = contractStatus(round);
+      var numTd = el("td", "num", String(r+1));
+      numTd.setAttribute("data-label", "Manche");
+      tr.appendChild(numTd);
+      var dealerIdx = dealerIndexForRound(r);
+      var dealerTd = el("td", "dealer", "<span class='toque'>🂠</span>" + state.players[dealerIdx].name);
+      dealerTd.setAttribute("data-label", "Donneur");
+      tr.appendChild(dealerTd);
+
+      for(var p=0;p<n;p++){
+        var isTaker = round.taken && round.takerIdx === p;
+        var tdClass = "cell-player";
+        if(isTaker) tdClass += " is-taker" + (status && !status.ok ? " chute-zero" : "");
+        else if(status && !status.ok) tdClass += " chute-bonus";
+        var td = el("td", tdClass);
+        td.setAttribute("data-label", state.players[p].name);
+        var inner = el("div", "cell-inner");
+
+        if(round.taken){
+          var input = el("input");
+          input.type = "number";
+          input.min = "0";
+          input.max = String(TOTAL_POINTS);
+          input.value = (round.values[p] === null || round.values[p] === undefined) ? "" : round.values[p];
+          input.placeholder = "—";
+          (function(rIdx, pIdx, inp){
+            inp.addEventListener("input", function(){
+              var v = inp.value;
+              state.rounds[rIdx].values[pIdx] = (v === "" ? null : Number(v));
+            });
+            inp.addEventListener("change", function(){
+              autoCalc(rIdx);
+              save(); render();
+            });
+          })(r, p, input);
+          inner.appendChild(input);
+
+          var btnRow = el("div", "cell-inner");
+          btnRow.style.flexDirection = "row";
+          btnRow.style.gap = "4px";
+
+          var takerBtn = el("button", "taker-btn" + (isTaker ? " active" : ""), "Preneur");
+          (function(rIdx, pIdx, btn){
+            btn.addEventListener("click", function(){
+              var rnd = state.rounds[rIdx];
+              rnd.takerIdx = (rnd.takerIdx === pIdx) ? null : pIdx;
+              save(); render();
+            });
+          })(r, p, takerBtn);
+          btnRow.appendChild(takerBtn);
+
+          var brBtn = el("button", "br-btn" + (round.belote[p] ? " active" : ""), "Belote");
+          (function(rIdx, pIdx, btn){
+            btn.addEventListener("click", function(){
+              state.rounds[rIdx].belote[pIdx] = !state.rounds[rIdx].belote[pIdx];
+              save(); render();
+            });
+          })(r, p, brBtn);
+          btnRow.appendChild(brBtn);
+
+          inner.appendChild(btnRow);
+
+          if(isTaker && status){
+            var cs = el("div", "contract-status " + (status.ok ? "ok" : "fail"),
+              status.ok ? "✅ Réussi" : ("💥 Chute — 0 pt, +" + CHUTE_BONUS + " aux autres"));
+            inner.appendChild(cs);
+          } else if(!isTaker && status && !status.ok){
+            inner.appendChild(el("div", "contract-status ok", "+" + CHUTE_BONUS));
+          }
+        } else {
+          inner.appendChild(el("div", null, "—"));
+          if(round.belote[p]){
+            var brBtn2 = el("button", "br-btn active", "Belote");
+            (function(rIdx, pIdx, btn){
+              btn.addEventListener("click", function(){
+                state.rounds[rIdx].belote[pIdx] = !state.rounds[rIdx].belote[pIdx];
+                save(); render();
+              });
+            })(r, p, brBtn2);
+            inner.appendChild(brBtn2);
+          }
+        }
+        td.appendChild(inner);
+        tr.appendChild(td);
+      }
+
+      var sumTd = el("td");
+      sumTd.setAttribute("data-label", "Somme (162)");
+      var fb = filledBaseSum(round);
+      var sumLabel;
+      if(!round.taken){
+        sumLabel = "personne ne prend";
+      } else if(fb.count === n){
+        sumLabel = fb.sum + " / " + TOTAL_POINTS + (fb.sum !== TOTAL_POINTS ? " ⚠" : "");
+      } else {
+        sumLabel = fb.sum + " / " + TOTAL_POINTS;
+      }
+      var sumDiv = el("div", "row-sum" + ((round.taken && fb.count===n && fb.sum!==TOTAL_POINTS) ? " bad" : ""), sumLabel);
+      sumTd.appendChild(sumDiv);
+      tr.appendChild(sumTd);
+
+      var actionTd = el("td", "row-actions");
+      actionTd.setAttribute("data-label", "Actions");
+      var personneBtn = el("button", "personne-btn" + (round.taken ? "" : " on"), "—");
+      (function(rIdx, btn){
+        btn.addEventListener("click", function(){
+          var rnd = state.rounds[rIdx];
+          rnd.taken = !rnd.taken;
+          if(!rnd.taken){
+            for(var i=0;i<rnd.values.length;i++) rnd.values[i] = null;
+            rnd.takerIdx = null;
+          }
+          save(); render();
+        });
+      })(r, personneBtn);
+      actionTd.appendChild(personneBtn);
+
+      var delBtn = el("button", "del-btn", "✕");
+      delBtn.title = "Supprimer cette manche";
+      (function(rIdx, btn){
+        btn.addEventListener("click", function(){
+          if(confirm("Supprimer la manche n°" + (rIdx+1) + " ?")){
+            state.rounds.splice(rIdx, 1);
+            save(); render();
+          }
+        });
+      })(r, delBtn);
+      actionTd.appendChild(delBtn);
+
+      tr.appendChild(actionTd);
+      tbody.appendChild(tr);
+    });
+
+    tfootRow.appendChild(el("td", null, ""));
+    var totalLabelTd = el("td", null, "Total");
+    totalLabelTd.setAttribute("data-label", "");
+    tfootRow.appendChild(totalLabelTd);
+    for(var p2=0;p2<n;p2++){
+      var total = grandTotal(p2);
+      var td2 = el("td", "total-player" + (total >= WIN_THRESHOLD ? " over" : ""), String(total));
+      td2.setAttribute("data-label", state.players[p2].name);
+      tfootRow.appendChild(td2);
+    }
+    tfootRow.appendChild(el("td", null, ""));
+    tfootRow.appendChild(el("td", null, ""));
+
+    renderPlayerSelects();
+    checkThreshold();
+  }
+
+  document.getElementById("btnNouvelleManche").addEventListener("click", function(){
+    state.rounds.push(emptyRound(state.players.length));
+    save(); render();
+  });
+
+  document.getElementById("btnReset").addEventListener("click", function(){
+    if(confirm("Réinitialiser toute la partie (scores et manches) ?")){
+      state = makeDefaultState(state.players.length);
+      save(); render();
+    }
+  });
+
+  document.getElementById("nbJoueurs").addEventListener("change", function(e){
+    var n = Number(e.target.value);
+    if(n === state.players.length) return;
+    if(state.rounds.length && !confirm("Changer le nombre de joueurs réinitialise la partie en cours. Continuer ?")){
+      e.target.value = state.players.length;
+      return;
+    }
+    state = makeDefaultState(n);
+    save(); render();
+  });
+
+  document.getElementById("premierDonneur").addEventListener("change", function(e){
+    state.firstDealer = Number(e.target.value);
+    save(); render();
+  });
+
+  render();
+  if(state.rounds.length === 0){
+    state.rounds.push(emptyRound(state.players.length));
+    save(); render();
+  }
+})();
+</script>
+</body>
+</html>
